@@ -24,6 +24,8 @@ survey in the Chandra Deep Field South; see the paper: Ranalli et
 al. 2013, A\\&A 555, A42.
  http://cdsads.u-strasbg.fr/abs/2013A%26A...555A..42R
 
+cdfs-extract is written in the Perl programming language, using the
+Perl Data Language modules.
 
 
 
