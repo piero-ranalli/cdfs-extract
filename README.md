@@ -290,47 +290,9 @@ a copy of the log, of the sky.txt, bgsky.txt and event.list:
 
 # VERSION HISTORY
 
-3. 0  -- 2013/11/01 removed logic to find CDFS ccf.cif and sum.sas: these
-                         files should now be stated in the evtlist; sky.txt
-                         and bgsky.txt now use arcsecs instead of physical 
-                         pixels;
-                         evtlist logic refactored in EvtFiles package;
-                         dbupdate is disabled;
-                         exclusion threshold now set to exposed\_area>40% i.e.
-                         deadarea<60% of PSF (and the meaning of the --exclude
-                         option was reversed)
-2. 93 -- 2013/9/27  started refactor and cleanup before releasing the code:
-                         PSF and Image packages moved to separate files
-2. 92 -- 2013/7/28  --photoerror=XXX now accepts probability level for BEHR
-2. 91 -- 2012/4/27  skip photometry of sources without a bkg region
-2. 9 -- 2011/9/23  reworked to use BEHR.pm; added timeout to BEHR;
-corrected a bug in photometry code
-2. 8 -- 2011/8/3  added checks of BACKSCAL
-2. 71 -- 2011/6/21  corrected a bug in SQL code
-2. 7  -- 2011/6/6   added results of spectral checks to mysql database
-2. 61 -- 2011/6/6   check that SAS is initialized before starting
-2. 6  -- 2011/5/12  adapted for MOSIX (--mosix option)
-2. 52 -- 2011/5/11  due to bug appearing only on lafaro, modified
-                         getSAS\_ODF\_CCF() to check the machine and behave
-                         accordingly (see details in getSAS\_ODF\_CCF())
-2. 51 -- 2011/4/14  added --evtlist=event.list option;
-                         corrected a bug which prevent responses from
-                         being calculated if bkg were not extracted
-2. 5 -- 2011/4/6  added the choice of camera in bgsky.txt
-2. 4.3 -- 2011/4/4  (internal use) made it possible to not specify any region in bgsky.txt
-2. 4.2 -- 2010/11/25 sometimes it is not possible to open $$.cdfsextract.stderr in sas\_exec during the check phase. Let's try using File::Temp to avoid any possibile race condition..
-2. 4.1 -- 2010/11/23 (internal use)   corrected bug in printfnlog
-2. 4 -- 2010/10/21 --photoerror option added: calculates errors on net counts and rates, using BEHR (which must be available)
-2. 31 -- 2010/09/29 added --noresp option
-2. 3 -- 2010/08/30 in aperture photometry, psf corrections now
-take into account which part of the PSF was exposed
-2. 2 -- 2010/08/24 calculate, on request, rmf and arf for the bkg files;
-also added options --noclobber and --maxproc
-2. 1 -- 2010/07/21 can make aperture photometry
-2. 0 -- 2010/06/18 added checks (whether src and bkg fall on
-different chips), summary of checks, multiple positions for source or
-bkg, exclusion of areas
-1. 0 -- 2010/04/29  first public version
+- 3.0  -- 2013/11/01   first public version!
+- (lots of development)
+- 1.0  -- 2010/04/29   initial version
 
 # LICENSE
 
