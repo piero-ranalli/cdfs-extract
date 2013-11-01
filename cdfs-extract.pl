@@ -1306,8 +1306,8 @@ extract products accordingly.  Responses (RMFs and ARFs) are
 calculated along with spectra.
 
 The spectra and responses can be summed with a companion program
-(cdfs-sumspectra.pl), available on request (see "Author" at the end of
-this document).
+(cdfs-sumspectra.pl), available as part of this distribution. (See its
+documentation with ./cdfs-sumspectra.pl --help).
 
 A listing of all options, and a detailed discussion of the steps to
 prepare the input files and run the program is in the following.
