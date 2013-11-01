@@ -13,8 +13,8 @@ extract products accordingly.  Responses (RMFs and ARFs) are
 calculated along with spectra.
 
 The spectra and responses can be summed with a companion program
-(cdfs-sumspectra.pl), available on request (see "Author" at the end of
-this document).
+(cdfs-sumspectra.pl), available as part of this distribution. (See its
+documentation with ./cdfs-sumspectra.pl --help).
 
 A listing of all options, and a detailed discussion of the steps to
 prepare the input files and run the program is in the following.
@@ -127,7 +127,7 @@ Perl Data Language modules.
         ID\_src2  RA\_2   DEC\_2   RADIUS\_2   \[RADIUS2\_2\]   \[CAMERA\_2\]
         ...      ...    ...     ...        \[...\]         \[...\]
 
-    where RA and DEC are in degrees, and the RADII are in "physical" units.
+    where RA and DEC are in degrees, and the RADII are in arcsec.
 
     Notes:
 
@@ -154,14 +154,10 @@ Perl Data Language modules.
 
 2. BACKGROUND:
 
-    prepare a file named bgsky.txt containing a table with the following info:
-        ID\_src1  RA\_src1   DEC\_src1   RADIUS1\_src1  \[RADIUS2\_src1\]
-        ID\_src2  RA\_src2   DEC\_src2   RADIUS1\_src1  \[RADIUS2\_src1\]
-        ...      ...       ...        ...           \[...\]
-
-    where RA and DEC are in degrees, and the RADII are in arcsec.
-    (RADIUS2 is optional.  If present, the region is interpreted as an
-    annulus, if missing, as a circle).  The same notes for SOURCES apply.
+    prepare a file named bgsky.txt containing a table with the same
+    structure of sky.txt. Use the same ID\_src to identify the sources,
+    but give RA, DEC and radii relative to the background regions.
+    The same notes for SOURCES apply.
 
 3. EVENT FILES:
 

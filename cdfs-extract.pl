@@ -1424,7 +1424,7 @@ prepare a file named sky.txt containing a table with the following info:
     ID_src2  RA_2   DEC_2   RADIUS_2   [RADIUS2_2]   [CAMERA_2]
     ...      ...    ...     ...        [...]         [...]
 
-where RA and DEC are in degrees, and the RADII are in "physical" units.
+where RA and DEC are in degrees, and the RADII are in arcsec.
 
 Notes:
 
@@ -1468,14 +1468,10 @@ spectrum of ID_src1.  You can of course exclude multiple positions
 
 =item 2. BACKGROUND:
 
-prepare a file named bgsky.txt containing a table with the following info:
-    ID_src1  RA_src1   DEC_src1   RADIUS1_src1  [RADIUS2_src1]
-    ID_src2  RA_src2   DEC_src2   RADIUS1_src1  [RADIUS2_src1]
-    ...      ...       ...        ...           [...]
-
-where RA and DEC are in degrees, and the RADII are in arcsec.
-(RADIUS2 is optional.  If present, the region is interpreted as an
-annulus, if missing, as a circle).  The same notes for SOURCES apply.
+prepare a file named bgsky.txt containing a table with the same
+structure of sky.txt. Use the same ID_src to identify the sources,
+but give RA, DEC and radii relative to the background regions.
+The same notes for SOURCES apply.
 
 =item 3. EVENT FILES:
 
