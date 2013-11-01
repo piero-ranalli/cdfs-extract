@@ -1,0 +1,13 @@
+# sample event list from the CDFS
+# first column: event file
+# second:       exposure map
+# third:        image (only used for aperture photometry; use NA otherwise)
+# fourth:       ccf.cif   (as in $SAS_CCF)
+# fifth:        *SUM.SAS  (as in $SAS_ODF)
+#
+/Volumes/data//XMM-CDFS/0108060401/10.0.0Reprocessed/GTI/m1u_stdmethod_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060401_m1u_stdmethod_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060401_m1u_stdmethod_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060401/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060401/odf/0299_0108060401_SCX00000SUM.SAS
+/Volumes/data//XMM-CDFS/0108060401/10.0.0Reprocessed/GTI/m2u_stdmethod_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060401_m2u_stdmethod_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060401_m2u_stdmethod_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060401/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060401/odf/0299_0108060401_SCX00000SUM.SAS
+/Volumes/data//XMM-CDFS/0108060401/10.0.0Reprocessed/GTI/pn_stdmethod_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060401_pn_stdmethod_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060401_pn_stdmethod_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060401/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060401/odf/0299_0108060401_SCX00000SUM.SAS
+/Volumes/data//XMM-CDFS/0108060501/10.0.0Reprocessed/GTI/m1s_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060501_m1s_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060501_m1s_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060501/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060501/odf/0299_0108060501_SCX00000SUM.SAS
+/Volumes/data//XMM-CDFS/0108060501/10.0.0Reprocessed/GTI/m2s_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060501_m2s_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060501_m2s_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060501/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060501/odf/0299_0108060501_SCX00000SUM.SAS
+/Volumes/data//XMM-CDFS/0108060501/10.0.0Reprocessed/GTI/pn_clean_corr_evt.fits   /Volumes/data//XMM-CDFS/Images/0108060501_pn_clean_corr_exp-2-8.fits   /Volumes/data//XMM-CDFS/Images/0108060501_pn_clean_corr_img-2-8.fits /Volumes/data/XMM-CDFS/0108060501/odf/ccf.cif /Volumes/data/XMM-CDFS/0108060501/odf/0299_0108060501_SCX00000SUM.SAS

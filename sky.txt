@@ -1,0 +1,17 @@
+# sample source definition from the XMM-CDFS
+#
+# circle with radius of ...
+P34H_48 53.16206 -27.95052 307
+P34H_155 53.28425 -27.84293 180
+#
+# different radii in different cameras:
+P34H_214 53.00563 -27.77995 275 EMOS1
+P34H_214 53.00563 -27.77995 300 EMOS2
+P34H_214 53.00563 -27.77995 325 EPN
+#
+# annulus
+P34H_222  53.248421 -27.77397 290 350
+#
+# annulus in only one camera
+P34H_227 53.346437 -27.771446  385 450 EPN
+
