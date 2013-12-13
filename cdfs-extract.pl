@@ -65,6 +65,7 @@ use Getopt::Long;
 use Parallel::ForkManager;
 use File::Temp qw/tempdir tempfile/;
 use Pod::Usage;
+use Astro::FITS::Header;
 use PDL;
 
 use Image;
