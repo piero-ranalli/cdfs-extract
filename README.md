@@ -1,3 +1,7 @@
+# NEWS
+
+New version 3.1!  With a smarter detection of out-of-FOV sources and cleaner error messages.
+
 # NAME
 
 cdfs-extract -- A program to extract spectra and aperture photometry
@@ -111,6 +115,17 @@ Perl Data Language modules.
 - \--keep\_tempfiles
 
     Keeps the temporary files in /tmp (may be useful for debug).
+
+- \--deadthreshks=X
+
+    Sets a minimum threshold for exposure (in ks) when calculating the
+    exposed fractions (default: 1 ks). May be useful in some cases
+    where the chip gaps have tiny exposure times (e.g. 100 s) which fool
+    the calculation.
+
+- \--oldskytxt
+
+    Uses old-format sky.txt for compatibility with versions up to 2.93.
 
 - \--help
 
@@ -276,10 +291,21 @@ corrected rate is thus
 
 Some warnings emitted by SAS can usually be considered safe, such as the following:
 
+- Could not read expmap (file) or source not specified for its
+camera.  
+
+        This signals one of two possibilities, which in the current version are
+        not distiguished:
+        1) a source region only applies to one or two cameras (eg MOS1 and
+        MOS2), but an event file is specified for another too (eg PN); in
+        this case it is safe to ignore it.
+        2) the exposure map was not readable for some reason (wrong filename?).
+
 - \* evselect: warning (NoFilteredEvents), No events have been selected - 
       filtering of the event list resulted in an empty table
-      (This warning signals that one source was completely out of the FOV
-      in one observation).
+
+        This warning signals that one source was completely out of the FOV
+        in one observation.
 
 Otherwise, if the following error is emitted, please report it along with
 a copy of the log, of the sky.txt, bgsky.txt and event.list:
@@ -288,6 +314,7 @@ a copy of the log, of the sky.txt, bgsky.txt and event.list:
 
 # VERSION HISTORY
 
+- 3.1  -- 2013/12/23   internal refactor, smarter detection of out-of-FOV sources
 - 3.0  -- 2013/11/01   first public version!
 - (lots of development)
 - 1.0  -- 2010/04/29   initial version

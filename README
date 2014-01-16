@@ -95,6 +95,15 @@ OPTIONS
     --keep_tempfiles
        Keeps the temporary files in /tmp (may be useful for debug).
 
+    --deadthreshks=X
+       Sets a minimum threshold for exposure (in ks) when calculating the
+       exposed fractions (default: 1 ks). May be useful in some cases where
+       the chip gaps have tiny exposure times (e.g. 100 s) which fool the
+       calculation.
+
+    --oldskytxt
+       Uses old-format sky.txt for compatibility with versions up to 2.93.
+
     --help
        Prints this help message.
 
@@ -247,10 +256,18 @@ WARNINGS AND ERRORS
     Some warnings emitted by SAS can usually be considered safe, such as the
     following:
 
+    Could not read expmap (file) or source not specified for its camera.
+         This signals one of two possibilities, which in the current version are
+         not distiguished:
+         1) a source region only applies to one or two cameras (eg MOS1 and
+         MOS2), but an event file is specified for another too (eg PN); in
+         this case it is safe to ignore it.
+         2) the exposure map was not readable for some reason (wrong filename?).
+
     ** evselect: warning (NoFilteredEvents), No events have been selected -
-    filtering of the event list resulted in an empty table (This warning
-    signals that one source was completely out of the FOV in one
-    observation).
+    filtering of the event list resulted in an empty table
+          This warning signals that one source was completely out of the FOV
+          in one observation.
 
     Otherwise, if the following error is emitted, please report it along
     with a copy of the log, of the sky.txt, bgsky.txt and event.list:
@@ -258,6 +275,9 @@ WARNINGS AND ERRORS
     .....: something wrong happened. Please check for errors in the log.
 
 VERSION HISTORY
+    3.1 -- 2013/11/15 added --deadthreshks option; the lists of source and
+    bkg regions are now Source and Region objects; modules organized in
+    lib/; added --oldskytxt option
     3.0 -- 2013/11/01 removed logic to find CDFS ccf.cif and sum.sas: these
     files should now be stated in the evtlist; sky.txt and bgsky.txt now use
     arcsecs instead of physical pixels; evtlist logic refactored in EvtFiles
