@@ -70,13 +70,15 @@ sub readevt {
     $self->{imgs} = {};
     $self->{ccfcif} = {};
     $self->{sumsas} = {};
+    $self->{obsname} = {};
 
     my $n = 0;
     while (my $f=<$EVT>) {
 
 	$n++;
 
-	next if ($f =~ /^\s*\#/);
+	next if ($f =~ /^\s*$/);  # empty line
+	next if ($f =~ /^\s*\#/); # comment line
 	chomp($f);
 	$f =~ s/\#.*$//;
 
@@ -99,6 +101,10 @@ sub readevt {
 	$self->{imgs}->{$ff[0]} = $ff[2];
 	$self->{ccfcif}->{$ff[0]} = $ff[3];
 	$self->{sumsas}->{$ff[0]} = $ff[4];
+	if (@ff == 6) {
+	    # obsname found
+	    $self->{obsname}->{$ff[0]} = $ff[5];
+	}
 
     }
     close($EVT);
@@ -132,6 +138,12 @@ sub sumsas {
     my $self = shift;
     my $evt = shift;
     return $self->{sumsas}->{$evt};
+}
+
+sub obsname {
+    my $self = shift;
+    my $evt = shift;
+    return $self->{obsname}->{$evt};
 }
 
 

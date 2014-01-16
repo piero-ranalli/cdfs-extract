@@ -19,6 +19,9 @@ use PDL;
 
 
 sub new {
+
+    # $src and $bkg are Source objects
+
     my ($class, $src,$bkg,$img) = @_;
     my $self = {};
 
@@ -26,6 +29,7 @@ sub new {
     $self->{BKG} = $bkg;
     $self->{IMG} = rfits($img.'[0]');
     $self->{IMGFILE} = $img;
+    $self->{DEADTHRESH} = 1;  # in ks (or whatever the expmap units are)
 
     my @todo;
     if (defined($self->{BKG})) {
@@ -35,7 +39,7 @@ sub new {
     }
 
     for my $what (@todo) {
-	my ($ok,@xy_rad) = main::radec2xy( $self->{$what}, $self->{IMGFILE}, '+0');
+	my ($ok,@xy_rad) = $self->{$what}->radec2xy( $self->{IMGFILE}, '+0' );
 	unless ($ok) {
 	    if ($what eq 'SRC') {
 		main::print_error("Could not read expmap $self->{IMGFILE} or source not specified for its camera.\n");
@@ -70,7 +74,13 @@ sub dead_fractions {
 
 	my $cut = $self->{IMG}->where($self->{"${what}_MASK"});
 	my $pixtot = $cut->flat->dim(0);
-	my $pm1 = $cut->where($cut<1)->dim(0);
+
+	if ($pixtot==0) {  # src is completely outside image
+	    push(@out,1);  # return 100% dead fraction
+	    next;
+	}
+
+	my $pm1 = $cut->where($cut<($self->{DEADTHRESH}*1000))->dim(0);
 
 	#  printf("pixtot=%5i pix<1=%5i pix<max/2=%5i mean=%10.3f sigma=%10.3f median=%10.3f\n",
 	#	$pixtot,$pm1,$pm2,$mean,$sigma,$med);

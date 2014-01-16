@@ -96,6 +96,31 @@ purpose.
 Images and event files require different formulae for the WCS conversion,
 thus different functions are provided.
 
+=cut
+
+package Astro::WCS2;
+
+use Carp;
+use Exporter;
+use PDL;
+
+our @ISA = qw/Exporter/;
+
+our @EXPORT_OK = qw/tgwcstransf tgwcstransfL wcstransf wcstransfinv
+pdlwcstransf pdlwcstransfinv wcs_evt_deg_transfinv wcs_evt_transfinv
+wcstransf_cd wcstransfinv_cd wcs_evt_transf/;
+
+our %EXPORT_TAGS = (
+		    tg  => [ qw/tgwcstransf tgwcstransfL/ ],
+		    img => [ qw/wcstransf wcstransfinv/ ],
+		    evt => [ qw/wcs_evt_transfinv wcs_evt_transf/ ],
+		    cd  => [ qw/wcstransf_cd wcstransfinv_cd/ ],
+		   );
+
+
+
+
+
 =head2 Notes on individual functions
 
 =over 4
@@ -297,6 +322,7 @@ sub wcstransfinv { # viceversa la reazione inversa
 
 
 sub pdlwcstransf { # (template image, xpixel, ypixel)
+    require PDL;
     use PDL::NiceSlice;
 
     # returns: array with RA,DEC
@@ -305,7 +331,7 @@ sub pdlwcstransf { # (template image, xpixel, ypixel)
                                # param is a hash
 
     unless (defined($pixel)) {
-	barf "did you forget \& while calling t_code?";
+	carp "did you forget \& while calling t_code?";
 	return;
     }
 
@@ -384,11 +410,13 @@ sub pdlwcstransf { # (template image, xpixel, ypixel)
 
     return $radec;
 
+    no PDL::NiceSlice;
 }
 
 
 
 sub pdlwcstransfinv { # (template image, xpixel, ypixel)
+    use PDL;
     use PDL::NiceSlice;
 
     # returns: array with RA,DEC
@@ -397,7 +425,7 @@ sub pdlwcstransfinv { # (template image, xpixel, ypixel)
                                # param is a hash
 
     unless (defined($radec)) {
-	barf "did you forget \& while calling t_code?";
+	carp "did you forget \& while calling t_code?";
 	return;
     }
 
@@ -409,7 +437,7 @@ sub pdlwcstransfinv { # (template image, xpixel, ypixel)
 
 
     if (($pixremap) and not defined($remaptempl)) {
-	barf "Must provide [pix]remaptempl[ate]!";
+	carp "Must provide [pix]remaptempl[ate]!";
 	# go on
 	$pixremap = undef;
     }
@@ -487,6 +515,7 @@ sub pdlwcstransfinv { # (template image, xpixel, ypixel)
 
     return $pixel;
 
+    no PDL::NiceSlice;
 }
 
 

@@ -22,6 +22,7 @@
 #
 #############################################################################
 #
+# version 3.1   2013/11/15-2013/12/23  PR
 # version 3.0   2013/11/01  PR
 # version 2.93  2013/09/27  PR
 # version 2.92  2013/07/28  PR
@@ -68,11 +69,11 @@ use Pod::Usage;
 use Astro::FITS::Header;
 use PDL;
 
+use lib 'lib/';
 use Image;
 use PSF;
 use EvtFiles;
-use Astro::WCS2;
-
+use CDFSExtract::Source;
 
 
 
@@ -88,6 +89,8 @@ my $noclobber = '';
 my $exclude = .40;  # meaning of exclude will be reversed after calling GetOptions()
 my $mosix = 0;
 my $DB_UPDATE = 0;
+my $deadthreshks = 1;  # threshold in ks for dead fractions
+my $oldskytxt;
 
 # signals
 my $ALL_OK = 1;
@@ -102,7 +105,7 @@ main();
 
 sub main {
     print <<LICENSE;
-This is cdfs-extract, version 3.0.
+This is cdfs-extract, version 3.1.
 
 Copyright (C) 2010-2013 Piero Ranalli
 This program comes with ABSOLUTELY NO WARRANTY.
@@ -118,6 +121,7 @@ LICENSE
     my $energy = 2; # keV
     my $help = '';
     my $evtlist = 'event.list';
+
     GetOptions('check'           => \$checkonly,
 	       'bkgresp'         => \$do_bkgresp,
 	       'noresp'          => \$dontdo_resp,
@@ -133,6 +137,8 @@ LICENSE
 	       'maxproc=i'       => \$maxproc,
 	       'mosix'           => \$mosix,
 	       'dbupdate!'       => \$DB_UPDATE,
+	       'deadthreshks=f'  => \$deadthreshks,
+	       'oldskytxt'       => \$oldskytxt,
 	      )
 	or pod2usage(2);
 
@@ -142,8 +148,8 @@ LICENSE
     }
 
     if ($DB_UPDATE) {
-	print_error("dbupdate is disabled in this version");
-	$DB_UPDATE=0;
+	#print_error("dbupdate is disabled in this version");
+	#$DB_UPDATE=0;
     }
 
     # override maxproc when running inside debugger
@@ -193,7 +199,21 @@ LICENSE
     my %bkgs = read_sources("bgsky.txt");
 
     # $srcs->{SRC} is a hash with the following structure:
-    #    (  ID1 => [ 
+    #    (  ID1 => $src1,
+    #       ID2 => $src2,
+    #       ... )
+    # where $src1, $src2 are objets of class CDFSExtract::Source
+
+    if (defined($oldskytxt) and $oldskytxt) {
+	# radii were specified in physical and not in arcsec
+	$srcs{$_}->old_style_radii for (keys %srcs);
+	$bkgs{$_}->old_style_radii for (keys %bkgs);
+    }
+
+
+
+
+    # before it was:
     #                [TYPE, RA, DEC, RADIUS<, RADIUS2><, CAMERA>],
     #                [TYPE, RA, DEC, RADIUS<, RADIUS2><, CAMERA>],
     #                ...
@@ -330,6 +350,7 @@ sub do_checks {
 		$pm->finish($STOPPED_code);
 		next; # in the case weŕe running with --maxproc=0
 	    }
+	    $expmap->{DEADTHRESH} = $deadthreshks if defined($deadthreshks);
 	    my ($src_dead_frac,$bkg_dead_frac) = $expmap->dead_fractions;
 
 	    my ($chipstatus,$chipsrc,$chipbkg);
@@ -534,7 +555,7 @@ sub do_extractions {
 	    # $good also contains info about bkg extraction
 	    my $bkg = $$good{$id} == $ALL_OK ? $$bkgs{$sourceID} : undef;
 	    extractor( $$srcs{$sourceID},$bkg,$evtfile,
-		       $sourceID,$obsid,$camera,$SAS );
+		       $sourceID,$obsid,$camera,$SAS,$events->obsname($evtfile) );
 
 
 	    # go back to maindir and remove tmpdir
@@ -553,9 +574,11 @@ sub do_extractions {
 
 sub extractor {
 
-    my ($src,$bkg,$evt,$sourceID,$obsid,$camera,$SAS) = @_;
+    # $src and $bkg are Source objects
 
-    my ($ok,@xy_rad) = radec2xy( $src, $evt, '+1' );
+    my ($src,$bkg,$evt,$sourceID,$obsid,$camera,$SAS,$obsname) = @_;
+
+    my ($ok,@xy_rad) = $src->radec2xy( $evt, '+1' );
     unless ($ok) {
 	chdir($maindir);
 	return;
@@ -568,7 +591,7 @@ sub extractor {
     my $withbackground = 1;
 
     if (defined( $bkg )) {
-	($ok, @bgxy_rad) = radec2xy( $bkg, $evt, '+1' );
+	($ok, @bgxy_rad) = $bkg->radec2xy( $evt, '+1' );
 	unless( $ok ) {
 	    $withbackground = 0;
 	    print_error("Bkg spectra will not be extract for source $sourceID.\n");
@@ -579,7 +602,7 @@ sub extractor {
     }
 
     ($ok, my $srcspec) = 
-	extract_spectrum( $sourceID, $obsid, $SAS, $camera, $evt, \@xy_rad, '' );
+	extract_spectrum( $sourceID, $obsid, $SAS, $camera, $evt, \@xy_rad, '', $obsname );
     unless ($ok) {
 	chdir($maindir);
 	return;
@@ -588,7 +611,7 @@ sub extractor {
     my $bkgspec;
     if ($withbackground) {
 	($ok, $bkgspec) = extract_spectrum( 
-	    $sourceID, $obsid, $SAS, $camera, $evt, \@bgxy_rad, 'bg' );
+	    $sourceID, $obsid, $SAS, $camera, $evt, \@bgxy_rad, 'bg', $obsname );
 	unless ($ok) {
 	    chdir($maindir);
 	    return;
@@ -616,71 +639,26 @@ sub read_sources {
     # modified to allow multiple areas per source (see man perlol)
     # and camera-specific backgrounds
 
-    use Scalar::Util qw/looks_like_number/;
-
     my $filename = shift;
     my %src;
 
     open(my $SRC, '<', $filename);
     while (my $f=<$SRC>) {
 
-	next if ($f =~ m/^\s*\#/); # jump comments
+	next if ($f =~ m/^\s*\#/); # skip comments
 	next if ($f =~ m/^\s*$/);  # and empty lines
 	$f =~ s/\#.*$//;  # remove comments
 
-	# look if region should be excluded or included
-	# (and be smart enough not to look into comments)
-	my $exclude = 0;
-	my ($id,$ra,$dec,$radius1,$radius2,$camera);
-	if ($f =~ m/exclude/) {
-	    ($id,undef,$ra,$dec,$radius1,$radius2,$camera) = split(/\s+/, trim($f));
-	    $exclude = 1;
-	    # sources to be excluded have negative radii
-	    $radius1 = -$radius1;
-	    if (defined($radius2) and looks_like_number($radius2)) {
-		$radius2 = -$radius2;
-	    }
-	} else {
-	    ($id,$ra,$dec,$radius1,$radius2,$camera) = split(/\s+/, trim($f));
-	}
+	my ($id,@rest) = split(' ', $f);
+	$src{$id} = CDFSExtract::Source->new unless exists($src{$id});
+	$src{$id}->add(@rest);
 
-	unless (defined($radius1)) {
-	    die "radius not defined in $filename\n"
-	}
-
-	arcsec2physpix(\$radius1);
-	arcsec2physpix(\$radius2) if looks_like_number($radius2);
-
-
-	if (defined($camera)) { # sure it's an annulus, whatever $camera contains
-	    push(@{ $src{$id} }, ['annulus',$ra,$dec,$radius1,$radius2,uc($camera)] );
-
-	# or, it may or may not have a camera specified. We have to check.
-	} elsif (defined($radius2) and not (
-		     uc($radius2) eq 'EMOS1' or
-		     uc($radius2) eq 'EMOS2' or
-		     uc($radius2) eq 'EPN')) {
-	    # then it's an annulus without camera
-	    push(@{ $src{$id} }, ['annulus',$ra,$dec,$radius1,$radius2] );
-
-	# otherwise, it's a circle; with or without a defined camera
-	} else {
-	    push(@{ $src{$id} }, ['circle',$ra,$dec,$radius1,
-				  defined($radius2) ? uc($radius2) : undef
-				 ] );
-	}
     }
     close($SRC);
     return(%src);
 }
 
 
-sub arcsec2physpix {
-    my $arcsec = shift;
-
-    # the following is the XMM convention
-    $$arcsec*=20;
-}
 
 sub getSASenvironment {
   my ($ccf,$sum) = @_;
@@ -725,7 +703,7 @@ sub print_error {
 
 sub extract_spectrum { # ($SAS, $camera, $evtfile, \@xy_rad, '' or 'bg' );
 
-  my ($src, $obsid, $SAS, $camera, $evtfile, $xy_rad, $bkgflag) = @_;
+  my ($src, $obsid, $SAS, $camera, $evtfile, $xy_rad, $bkgflag, $obsname) = @_;
 
   # chooses and executes the template command
 
@@ -737,7 +715,10 @@ sub extract_spectrum { # ($SAS, $camera, $evtfile, \@xy_rad, '' or 'bg' );
 
 
   # decide spectrum name
-  my $specname = "$productdir/$src-$obsid-$camera";
+  if (! defined($obsname) or $obsname eq '') {
+      $obsname = $obsid;
+  }
+  my $specname = "$productdir/$src-$obsname-$camera";
   unless ($bkgflag eq '') {
     $specname = $specname."-$bkgflag";
   }
@@ -963,63 +944,6 @@ sub phys2img {
 
 
 
-sub radec2xy {   # using sky2xy seems not to work in parallel
-     # converts from ra,dec to x,y using PDL
-     # now accepts multiple positions for same source (i.e. stacked
-     # spectra)
-
-
-    my ($src,$evt,$ext) = @_;	# $src is an array ref
-
-    my ($wcs_sub,$header);
-    if ($ext eq '+0') {
-	$ext = '[0]';
-	$header = rfits($evt.$ext,{data=>0});
-	$wcs_sub = \&wcstransfinv;
-    } elsif ($ext eq '+1') {
-	$ext = '[1]';
-	$header = rfits($evt.$ext,{data=>0});
-	$wcs_sub = \&wcs_evt_transfinv;
-    } else {
-	print_error("Strange FITS extension \#$ext asked for file $evt -- could not read.\n");
-	return(0);
-    }
-
-    my $cam = $header->{INSTRUME};
-
-    my @new_lol;
-    for my $i (0..$#$src) {
-	my ($type,$ra,$dec,@radii) = @{$$src[$i]}  ;
-
-	# for how read_sources works, the camera (if it's there) is
-	# always the last item in the list.
-	my $askedcam = $radii[$#radii];
-	if (defined($askedcam) and (
-		$askedcam eq 'EMOS1' or
-		$askedcam eq 'EMOS2' or
-		$askedcam eq 'EPN')) {
-
-	    # a camera is specified, so let's cycle unless
-	    # it is the good one
-	    next unless ($askedcam eq $cam);
-
-	    # remove from the radii
-	    pop(@radii);
-	}
-
-	my ($x,$y);
-	($x,$y) = &$wcs_sub($header,$ra,$dec);
-
-	push(@new_lol, [ $type,$x,$y,@radii ]);
-    }
-
-    # check if the new lol actually contains any item, and return
-    if ($#new_lol >= 0) {
-	return(1,@new_lol);
-    } else {
-	return(0);
-    }
-}
 
 
 
@@ -1119,7 +1043,7 @@ sub summary_of_checks {
 
     # CHIPS
     for my $key (@k) {
-	if (($$diffchip{$key} != $CHIP_OK) and ($$diffchip{$key} != $CHIP_NA) 
+	if (($$diffchip{$key} != $CHIP_OK) and ($$diffchip{$key} != $CHIP_NA)
 	    and $goodness{$key}) {
 	    push(@chipmsg,$key);
 	}
@@ -1163,7 +1087,7 @@ sub check_samechips {
 
     # the SAS expression then gets recalculated in extract_spectrum
     # is it worthwhile to put all exprs in wholefile-scoped variables?
-    my ($ok, @xy_rad) = radec2xy( $src, $evt, '+1' );
+    my ($ok, @xy_rad) = $src->radec2xy( $evt, '+1' );
     my $expr = src2expr(\@xy_rad); # SAS expression
 
     # extract histogram of src
@@ -1171,7 +1095,7 @@ sub check_samechips {
     $ok = sas_exec( $SAS, $cmd );
 
     # now for bkg
-    ($ok, @xy_rad) = radec2xy( $bkg, $evt, '+1' );
+    ($ok, @xy_rad) = $bkg->radec2xy( $evt, '+1' );
     $expr = src2expr(\@xy_rad);
     $cmd = "evselect table=$evt withhistogramset=yes histogramset=$histob histogramcolumn=CCDNR histogrambinsize=1 expression='$xmmea && $expr'";
     $ok = sas_exec( $SAS, $cmd );
@@ -1406,6 +1330,17 @@ processes is limited to max(X,4).
 
 Keeps the temporary files in /tmp (may be useful for debug).
 
+=item --deadthreshks=X
+
+Sets a minimum threshold for exposure (in ks) when calculating the
+exposed fractions (default: 1 ks). May be useful in some cases
+where the chip gaps have tiny exposure times (e.g. 100 s) which fool
+the calculation.
+
+=item --oldskytxt
+
+Uses old-format sky.txt for compatibility with versions up to 2.93.
+
 =item --help
 
 Prints this help message.
@@ -1604,10 +1539,22 @@ Some warnings emitted by SAS can usually be considered safe, such as the followi
 
 =over 4
 
+=item Could not read expmap (file) or source not specified for its
+camera.  
+
+ This signals one of two possibilities, which in the current version are
+ not distiguished:
+ 1) a source region only applies to one or two cameras (eg MOS1 and
+ MOS2), but an event file is specified for another too (eg PN); in
+ this case it is safe to ignore it.
+ 2) the exposure map was not readable for some reason (wrong filename?).
+
+
 =item ** evselect: warning (NoFilteredEvents), No events have been selected - 
       filtering of the event list resulted in an empty table
-      (This warning signals that one source was completely out of the FOV
-      in one observation).
+
+  This warning signals that one source was completely out of the FOV
+  in one observation.
 
 =back
 
@@ -1623,6 +1570,11 @@ a copy of the log, of the sky.txt, bgsky.txt and event.list:
 =head1 VERSION HISTORY
 
 =over 4
+
+=item 3.1  -- 2013/11/15 added --deadthreshks option; the lists of
+                         source and bkg regions are now Source and
+                         Region objects; modules organized in lib/;
+                         added --oldskytxt option
 
 =item 3.0  -- 2013/11/01 removed logic to find CDFS ccf.cif and sum.sas: these
                          files should now be stated in the evtlist; sky.txt
