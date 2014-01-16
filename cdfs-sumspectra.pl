@@ -347,8 +347,11 @@ sub sumspec {
 
 However, even with properr=no, mathpha calculates statistical errors
 with Poissonian statistics. These need to be removed, by deleting the
-STAT_ERR and QUALITY columns in the summed spectra. Finally, the POISSERR
+STAT_ERR(*) and QUALITY columns in the summed spectra. Finally, the POISSERR
 keyword of the header is set to True.
+
+(*) STAT_ERR seems not to be present in spectra extracted with SAS
+13. The program will only remove the column if it is actually present.
 
 =cut
 
@@ -356,9 +359,16 @@ sub del_stat_cols {
 
     my $name = shift;
 
-    my ($ok,$out,$err) = call("fdelcol ${name}+1 STAT_ERR N Y");
+    my ($ok,$out,$err) = call("flcol ${name}+1");
     unless ($ok) {
-	die("Could not delete STAT_ERR column in file $name.\n$err");
+	die("Could not get a list of the columns in file $name.\n$err");
+    }
+
+    if ($out =~ m/STAT_ERR/) {
+	($ok,$out,$err) = call("fdelcol ${name}+1 STAT_ERR N Y");
+	unless ($ok) {
+	    die("Could not delete STAT_ERR column in file $name.\n$err");
+	}
     }
 
     ($ok,$out,$err) = call("fdelcol ${name}+1 QUALITY N Y");
@@ -561,6 +571,10 @@ License along with this program.  If not, see
 =head1 VERSION
 
 =over 4
+
+=item v. 2.8 -- 2014/1/16
+
+only remove STAT_ERR column if actually present
 
 =item v. 2.71 -- 2013/11/1
 
