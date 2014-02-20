@@ -7,7 +7,7 @@ use Astro::WCS2 qw/:img :evt/;
 
 # isa's are ignored in Mo, but I'll specify them anyway for documentation purposes
 has id      => ( isa => 'Str' );
-has regions => ( ias => 'ArrayRef[Region]' );
+has regions => ( isa => 'ArrayRef[Region]' );
 
 
 sub add {
