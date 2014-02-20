@@ -5,7 +5,7 @@
 #
 #############################################################################
 #
-# Copyright (C) 2010-2013  Piero Ranalli
+# Copyright (C) 2010-2014  Piero Ranalli
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -107,7 +107,7 @@ sub main {
     print <<LICENSE;
 This is cdfs-extract, version 3.1.
 
-Copyright (C) 2010-2013 Piero Ranalli
+Copyright (C) 2010-2014 Piero Ranalli
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions; for details type:   ./cdfs-extract.pl --help
