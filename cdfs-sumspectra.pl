@@ -7,7 +7,7 @@ cdfs-sumspectra.pl -- Sum spectra extracted by cdfs-extract.pl.
 
 =cut
 
-# Copyright (C) 2010-2013  Piero Ranalli
+# Copyright (C) 2010-2014  Piero Ranalli
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -137,13 +137,21 @@ sub do_everything {
 	look4files($dir,$src,$cam,$epoch,$bkgresp);
     #$spec etc are array refs
 
-    my $spec_backsc = getbackscale($spec); # xxx_backsc: array refs
-    my $bg_backsc = getbackscale($bg);
-
     my $sumname = "${src}-${cam}-sum";
     unless( $epoch eq '' ) {
 	$sumname .= "-${epoch}";
     }
+
+    if (scalar @$spec == 1) {
+	# no need to sum
+	justcopy($spec,$bg,$rmf,$arf,$bgrmf,$bgarf,$sumname);
+	print("Spectrum copied for source $src epoch $epoch.\n");
+	return;
+    }
+
+
+    my $spec_backsc = getbackscale($spec); # xxx_backsc: array refs
+    my $bg_backsc = getbackscale($bg);
 
     unless ($nospec) {
 	sumspec($spec,$sumname.'.pha');
@@ -548,6 +556,30 @@ sub checkbackscale {
 }
 
 
+
+
+sub justcopy {
+    my $sumname = pop;
+    my @filelists = @_;# ($spec,$bg,   $rmf,$arf,$bgrmf,$bgarf)
+    my @suffixes = qw/.pha -bg.pha .rmf .arf -bg.rmf -bg.arf/;
+
+
+    for my $i (0..$#filelists) {
+	my $f = $filelists[$i];
+	$f // next;
+
+	if (@$f>2) {
+	    die "unexpected number of files: found ".join ',',@$f;
+	} elsif (@$f==1) {
+	    my $f1 = $sumname.$suffixes[$i];
+	    call( "ln $$f[0] $f1" );
+	}
+    }
+}
+
+
+
+
 =head1 LICENSE
 
 Copyright (C) 2010-2013  Piero Ranalli
@@ -571,6 +603,11 @@ License along with this program.  If not, see
 =head1 VERSION
 
 =over 4
+
+=item v. 2.9 -- 2014/3/4
+
+don't sum but rather hardlink spectrum and responses if only one
+spectrum to sum is found
 
 =item v. 2.8 -- 2014/1/16
 
