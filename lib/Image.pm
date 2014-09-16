@@ -197,16 +197,22 @@ sub src_radius {
     #       }
     #       return($self->{RADIUS});
 
-    return(${$self->{SRC}}[0][3] /20); # in arcsec!
-    # for the factor 20, see the comments in main::phys2img
+    # old line, used when sources where stored in hash of arrays of arrays:
+    #return(${$self->{SRC}}[0][3] /20); # in arcsec!
+
+    # new version using Source and Region objects:
+    my $reg = $self->{SRC}->regions->[0]; # take first region of source
+    return $reg->radius1;  # the /20 is no longer needed since we switched
+                           # to arcsecs in the radii
 }
 
 sub calc_offaxis {
     my $self = shift;
 
     # take the position of the first source
-    my $ra = ${$self->{SRC}}[0][1];
-    my $dec= ${$self->{SRC}}[0][2];
+    my $reg = $self->{SRC}->regions->[0];
+    my $ra = $reg->ra;
+    my $dec= $reg->dec;
 
     my $oa = sqrt( ($ra - $self->{IMG}->hdr->{RA_PNT}) ** 2
 		   + ($dec - $self->{IMG}->hdr->{DEC_PNT}) ** 2 );
