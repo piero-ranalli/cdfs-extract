@@ -129,7 +129,7 @@ sub calc_masks {
 		my $r2 = main::phys2img(int($xy_rad[$i][4]), $self->{IMG}->hdr->{CDELT1}) ;
 		my $msk2 = rvals( $self->{IMG}, {CENTRE=>[$xy_rad[$i][1],$xy_rad[$i][2]],
 						 SQUARED=>1} ) <= $r2*$r2;
-		$msk -= $msk2;
+		$msk = $msk2 - $msk;
 	    }
 
 	    $fullmask += $msk;
