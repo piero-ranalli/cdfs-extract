@@ -22,6 +22,7 @@
 #
 #############################################################################
 #
+# version 3.2   2014/7/7    PR
 # version 3.1   2013/11/15-2013/12/23  PR
 # version 3.0   2013/11/01  PR
 # version 2.93  2013/09/27  PR
@@ -74,7 +75,7 @@ use Image;
 use PSF;
 use EvtFiles;
 use CDFSExtract::Source;
-
+use CDFSExtract::Photometer;
 
 
 # this variables are visible in all the file
@@ -105,7 +106,7 @@ main();
 
 sub main {
     print <<LICENSE;
-This is cdfs-extract, version 3.1.
+This is cdfs-extract, version 3.2.
 
 Copyright (C) 2010-2014 Piero Ranalli
 This program comes with ABSOLUTELY NO WARRANTY.
@@ -115,6 +116,7 @@ under certain conditions; for details type:   ./cdfs-extract.pl --help
 LICENSE
 
     my $checkonly = '';
+    my $lightcurve = '';
     my $photometry = '';
     my $photoerror = '';
     my $photoerrorlev = 90;
@@ -126,6 +128,7 @@ LICENSE
 	       'bkgresp'         => \$do_bkgresp,
 	       'noresp'          => \$dontdo_resp,
 	       'noclobber'       => \$noclobber,
+	       'lightcurve'      => \$lightcurve,
 	       'photometry'      => \$photometry,
 	       'photoerror'      => \$photoerror,
 	       'photoerrorlev=f' => \$photoerrorlev,
@@ -203,17 +206,8 @@ LICENSE
     #       ID2 => $src2,
     #       ... )
     # where $src1, $src2 are objets of class CDFSExtract::Source
-
-    if (defined($oldskytxt) and $oldskytxt) {
-	# radii were specified in physical and not in arcsec
-	$srcs{$_}->old_style_radii for (keys %srcs);
-	$bkgs{$_}->old_style_radii for (keys %bkgs);
-    }
-
-
-
-
-    # before it was:
+    #
+    # but in previous versions it was:
     #                [TYPE, RA, DEC, RADIUS<, RADIUS2><, CAMERA>],
     #                [TYPE, RA, DEC, RADIUS<, RADIUS2><, CAMERA>],
     #                ...
@@ -228,7 +222,11 @@ LICENSE
     #
     # same for %bkgs
 
-
+    if (defined($oldskytxt) and $oldskytxt) {
+	# radii were specified in physical and not in arcsec
+	$srcs{$_}->old_style_radii for (keys %srcs);
+	$bkgs{$_}->old_style_radii for (keys %bkgs);
+    }
 
 
     unless (-d $productdir) {
@@ -257,6 +255,8 @@ sub do_checks {
 	require SQL;
     }
 
+    my $photometer = CDFSExtract::Photometer->new;
+
     my ($dophot,$doerrors,$errorlev,$srcs,$bkgs,$events,$energy) = @_;
                                   # hash  hash  object
 
@@ -284,6 +284,12 @@ sub do_checks {
 			   chomp($deadsrc{$child_id} = <$fileh>);
 			   chomp($deadbkg{$child_id} = <$fileh>);
 			   chomp($chipstat{$child_id} = <$fileh>);
+
+			   # here it should really check for $dophot_ok,
+			   # which however cannot be defined at this stage,
+			   # so let use $dophot instead: Photometer.pm
+			   # will (be asked to) put zeroes if ! $dophot_ok
+			   # so the values will be defined anyway
 			   if ($dophot) {
 			       chomp($src_cts{$child_id} = <$fileh>);
 			       chomp($bkg_cts{$child_id} = <$fileh>);
@@ -390,79 +396,39 @@ sub do_checks {
 			  });
 	    }
 
-
-	    my $src_cts=my $bkg_cts=my $src_avg_exp=my $bkg_avg_exp=
-		my $src_area=my $bkg_area=my $psffrac=my $net_cts=my $net_lowerr=my $net_higherr=
-		    my $rate=my $medianrate=my $rate_lowerr=my $rate_higherr=0;
-	    if ($dophot
+	    my $dophot_ok = ($dophot
 		and $bkg_dead_frac != $BKG_NOT_SPECIFIED # don't do photometry for sources without bkg
 		and $src_dead_frac<$exclude
-		and $bkg_dead_frac<$exclude) {
+		and $bkg_dead_frac<$exclude);
+
+	    if ($dophot_ok) {
+
 		my $image = Image->new( $srcs->{$sourceID},$bkgs->{$sourceID},
 					$events->img($evtfile) );
-		unless ($image) {  # could not create object, probably because could
+		unless ($image) { # could not create object, probably because could
 		    # not read expmap/image, and this may happen if the cameras do not match
 		    $pm->finish($STOPPED_code);
 		}
-    		$image->masks( $expmap->exposed_masks );
-
-		#print("$sourceID $evtfile\n");
-		($src_cts,$bkg_cts) = $image->masked_sums;
-		($src_avg_exp,$bkg_avg_exp) = $expmap->masked_averages;
-		($src_area,$bkg_area) = $expmap->areas;
-
-		# rate is always classical
-		$rate = $src_cts/$src_avg_exp -
-		    $bkg_cts/$bkg_avg_exp/$bkg_area*$src_area;
-
-		if ($doerrors) {
-		    # Bayesian posterior median of net counts and rate, with errors
-		    ($net_cts,$net_lowerr,$net_higherr) = 
-			get_errors_from_BEHR(
-					     $src_cts, $bkg_cts, 
-					     $bkg_area/$src_area*$bkg_avg_exp/$src_avg_exp,
-					     $child_id,
-					     $errorlev
-					    );
-		    $medianrate = $net_cts / $src_avg_exp;
-		    $rate_lowerr = $net_lowerr / $src_avg_exp;
-		    $rate_higherr = $net_higherr / $src_avg_exp;
-		} else {
-		    # 'classical' net counts and no rate errors
-		    $net_cts = $src_cts - $bkg_cts/$bkg_area*$src_area;
-		    $net_lowerr = $net_higherr = $rate_lowerr = $rate_higherr = $medianrate = 0;
-		}
+		$image->masks( $expmap->exposed_masks );
 
 		my ($off_axis,$rotation) = $image->calc_offaxis;
 		my $psf = PSF->new($off_axis,$energy);
 		$psf->rotatepsf($rotation);
-		$psffrac = $psf->eef($expmap);
-		$rate /= $psffrac;
-		$medianrate /= $psffrac;
-		$rate_lowerr /= $psffrac;
-		$rate_higherr /= $psffrac;
 
+		$photometer->extract($image,$expmap,$psf);
+
+		$photometer->bayesian($child_id,$errorlev) if ($doerrors);
 	    }
 
 	    print($fileh $src_dead_frac."\n");
 	    print($fileh $bkg_dead_frac."\n");
 	    print($fileh $chipstatus."\n");
-	    if ($dophot) {
-		print($fileh $src_cts."\n");
-		print($fileh $bkg_cts."\n");
-		print($fileh $src_avg_exp."\n");
-		print($fileh $bkg_avg_exp."\n");
-		print($fileh $src_area."\n");
-		print($fileh $bkg_area."\n");
-		print($fileh $psffrac."\n");
-		print($fileh $net_cts."\n");
-		print($fileh $net_lowerr."\n");
-		print($fileh $net_higherr."\n");
-		print($fileh $rate."\n");
-		print($fileh $medianrate."\n");
-		print($fileh $rate_lowerr."\n");
-		print($fileh $rate_higherr."\n");
+	    if ($dophot_ok) {
+		$photometer->print($fileh);
+	    } else {
+		$photometer->printempty($fileh);
 	    }
+
 	    close($fileh);
 
 	    chdir($maindir);
@@ -490,32 +456,6 @@ sub do_checks {
 
 
 
-sub get_errors_from_BEHR {
-    require Astro::BEHR;
-    my ($ssrc,$sbkg,$sarea,$id,$errorlev) = @_;
-
-    my $behr = Astro::BEHR->new;
-    $behr->set($ssrc,$sbkg,$sarea,$ssrc,$sbkg,$sarea,90);
-
-    $behr->{LEV} = $errorlev if ($errorlev);
-
-    $behr->timeout(180);
-    my $err = $behr->run;
-    if ($err eq 'TIMEOUT') {
-	printnlog("Timed out (quadr): $id\n");
-        # try again:
-        $behr->{ALGO} = 'gibbs';  # much faster
-        my $err2 = $behr->run;
-
-        if ($err2 eq 'TIMEOUT') {  # AGAIN?!?
-	    printnlog("Timed out (gibbs): $id\n");
-	    return(0,0,0);
-        }
-    }
-
-    my $vals = $behr->get('S');
-    return(@$vals[2..4]);
-}
 
 
 
@@ -1186,7 +1126,7 @@ sub photometry_report {
     }
     sub pr_getobsid {
 	my $k = shift;
-	(my $obsid) = ($k =~ m|^.+\@.*/(\d+)/|);
+	(my $obsid) = ($k =~ m|^.+\@.*/(\d+[su]?)/|);
 	return($obsid);
     }
     sub pr_getcamera {
@@ -1570,6 +1510,8 @@ a copy of the log, of the sky.txt, bgsky.txt and event.list:
 =head1 VERSION HISTORY
 
 =over 4
+
+=item 3.2  -- 2014/7/7   refactor of photometry code
 
 =item 3.1  -- 2013/11/15 added --deadthreshks option; the lists of
                          source and bkg regions are now Source and
